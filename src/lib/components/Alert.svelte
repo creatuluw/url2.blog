@@ -42,7 +42,7 @@
 {#if isVisible}
 	<div
 		role="alert"
-		class="glass-panel border rounded-lg shadow-lg px-4 py-3 flex items-center gap-3 {colorClasses} {children === undefined ? 'fixed top-20 left-1/2 -translate-x-1/2 z-50' : ''}"
+		class="glass-panel border rounded-lg shadow-lg px-4 py-3 flex items-center gap-3 {colorClasses} {children === undefined ? 'fixed bottom-4 right-4 z-50' : ''}"
 	>
 		<svg
 			xmlns="http://www.w3.org/2000/svg"

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Trash2 } from '@lucide/svelte';
+
 	interface Props {
 		urlValue: string;
 		onUrlChange: (url: string) => void;
@@ -8,6 +10,10 @@
 	}
 
 	let { urlValue, onUrlChange, onPaste, onSubmit, disabled = false }: Props = $props();
+
+	function handleClear() {
+		onUrlChange('');
+	}
 
 	let isSubmitting = $state(false);
 
@@ -55,29 +61,42 @@
 				bind:value={urlValue}
 				disabled={disabled || isSubmitting}
 			/>
-			<button
-				type="button"
-				class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-[var(--accent-light)] transition-colors cursor-pointer"
-				onclick={onPaste}
-				disabled={disabled || isSubmitting}
-				title="Paste from clipboard"
-				aria-label="Paste from clipboard"
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					width="18"
-					height="18"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-					stroke-linejoin="round"
+			{#if urlValue}
+				<button
+					type="button"
+					class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-[var(--accent-light)] transition-colors cursor-pointer"
+					onclick={handleClear}
+					disabled={disabled || isSubmitting}
+					title="Clear input"
+					aria-label="Clear input"
 				>
-					<rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
-					<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-				</svg>
-			</button>
+					<Trash2 size={18} />
+				</button>
+			{:else}
+				<button
+					type="button"
+					class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-[var(--accent-light)] transition-colors cursor-pointer"
+					onclick={onPaste}
+					disabled={disabled || isSubmitting}
+					title="Paste from clipboard"
+					aria-label="Paste from clipboard"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="18"
+						height="18"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+						<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+					</svg>
+				</button>
+			{/if}
 		</div>
 	</div>
 

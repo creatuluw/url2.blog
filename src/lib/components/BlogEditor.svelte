@@ -1,10 +1,12 @@
 <script lang="ts">
 	import Button from '$lib/components/Button.svelte';
+	import MarkdownEditor from '$lib/components/MarkdownEditor.svelte';
 
 	interface Props {
 		content?: string;
 		title?: string;
 		savedUrlId?: string | null;
+		isGenerating?: boolean;
 		onSave?: (data: { content: string; title: string }) => void;
 		onCancel?: () => void;
 	}
@@ -13,18 +15,36 @@
 		content = '',
 		title = '',
 		savedUrlId = null,
+		isGenerating = false,
 		onSave,
 		onCancel,
 	}: Props = $props();
 
 	let formContent = $state('');
 	let formTitle = $state('');
-	let isEditing = $state(true);
+	let hasUserEdited = $state(false);
 
+	// Sync content from parent while generating and user hasn't edited
 	$effect(() => {
-		formContent = content;
-		formTitle = title;
+		// Sync content while generating (streaming content)
+		if (isGenerating && !hasUserEdited) {
+			formContent = content;
+		}
 	});
+
+	// Sync title from parent if available and user hasn't edited
+	$effect(() => {
+		if (!hasUserEdited && title) {
+			formTitle = title;
+		}
+	});
+
+	// Mark as user edited when they edit the title
+	function handleTitleChange() {
+		if (!isGenerating) {
+			hasUserEdited = true;
+		}
+	}
 
 	function handleSave() {
 		onSave?.({
@@ -50,27 +70,9 @@
 				type="text"
 				class="input-field"
 				bind:value={formTitle}
+				onchange={handleTitleChange}
 				placeholder="Enter your blog post title..."
 			/>
-		</div>
-
-		<div class="editor-toolbar">
-			<Button
-				variant="outline"
-				size="sm"
-				class={isEditing ? 'active' : ''}
-				onclick={() => isEditing = true}
-			>
-				Edit
-			</Button>
-			<Button
-				variant="outline"
-				size="sm"
-				class={!isEditing ? 'active' : ''}
-				onclick={() => isEditing = false}
-			>
-				Preview
-			</Button>
 		</div>
 	</div>
 
@@ -78,38 +80,14 @@
 		<span>{wordCount} words</span>
 		<span>•</span>
 		<span>{charCount} characters</span>
+		{#if isGenerating}
+			<span>•</span>
+			<span class="generating-indicator" style="color: var(--accent);">Generating...</span>
+		{/if}
 	</div>
 
 	<div class="editor-body">
-		{#if isEditing}
-			<textarea
-				class="input-field textarea-field editor-textarea"
-				bind:value={formContent}
-				placeholder="Start writing your blog post in Markdown..."
-			></textarea>
-		{:else}
-			<div class="preview-content">
-				{#if formContent}
-					{@html formContent.split('\n').map(line => {
-						if (line.startsWith('# ')) {
-							return `<h1>${line.slice(2)}</h1>`;
-						} else if (line.startsWith('## ')) {
-							return `<h2>${line.slice(3)}</h2>`;
-						} else if (line.startsWith('### ')) {
-							return `<h3>${line.slice(4)}</h3>`;
-						} else if (line.startsWith('- ')) {
-							return `<li>${line.slice(2)}</li>`;
-						} else if (line.trim() === '') {
-							return '<br>';
-						} else {
-							return `<p>${line}</p>`;
-						}
-					}).join('')}
-				{:else}
-					<p class="text-[var(--fg-muted)]">No content to preview</p>
-				{/if}
-			</div>
-		{/if}
+		<MarkdownEditor bind:value={formContent} placeholder="Start writing your blog post in Markdown..." />
 	</div>
 
 	<div class="editor-footer">
@@ -118,10 +96,10 @@
 		</Button>
 		<Button
 			variant="primary"
-			disabled={!formTitle.trim() || !formContent.trim()}
+			disabled={!formTitle.trim() || !formContent.trim() || isGenerating}
 			onclick={handleSave}
 		>
-			Save Changes
+			{isGenerating ? 'Generating...' : 'Save Changes'}
 		</Button>
 	</div>
 </div>
@@ -131,6 +109,7 @@
 		display: flex;
 		flex-direction: column;
 		height: 100%;
+		min-height: 500px;
 		background: var(--bg);
 		border-radius: var(--radius-lg);
 		overflow: hidden;
@@ -149,13 +128,6 @@
 		flex: 1;
 	}
 
-	.editor-toolbar {
-		display: flex;
-		gap: 0.5rem;
-	}
-
-
-
 	.editor-stats {
 		display: flex;
 		gap: 0.5rem;
@@ -165,60 +137,26 @@
 		border-bottom: 1px solid var(--border);
 	}
 
+	.generating-indicator {
+		font-weight: 500;
+		animation: pulse 1.5s ease-in-out infinite;
+	}
+
+	@keyframes pulse {
+		0%, 100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.5;
+		}
+	}
+
 	.editor-body {
 		flex: 1;
 		overflow: hidden;
 		display: flex;
 		flex-direction: column;
-	}
-
-	.editor-textarea {
-		flex: 1;
 		min-height: 300px;
-		resize: none;
-		font-family: var(--font-mono, 'Fira Code', monospace);
-		font-size: 0.875rem;
-		line-height: 1.6;
-		padding: 1rem;
-		border: none;
-		border-radius: 0;
-	}
-
-	.editor-textarea:focus {
-		outline: none;
-		box-shadow: none;
-	}
-
-	.preview-content {
-		flex: 1;
-		padding: 1rem;
-		overflow-y: auto;
-	}
-
-	.preview-content :global(h1) {
-		font-size: 1.5rem;
-		font-weight: 700;
-		margin: 1rem 0 0.5rem;
-	}
-
-	.preview-content :global(h2) {
-		font-size: 1.25rem;
-		font-weight: 600;
-		margin: 0.75rem 0 0.5rem;
-	}
-
-	.preview-content :global(h3) {
-		font-size: 1rem;
-		font-weight: 600;
-		margin: 0.5rem 0 0.25rem;
-	}
-
-	.preview-content :global(p) {
-		margin: 0.5rem 0;
-	}
-
-	.preview-content :global(li) {
-		margin-left: 1.5rem;
 	}
 
 	.editor-footer {

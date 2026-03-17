@@ -82,10 +82,11 @@
 
 <!-- Filter Panel - Rendered as sibling to break out of flex container -->
 {#if (mode === 'panel' || mode === 'both') && open}
-	<div class="w-full mb-6 bg-zinc-100 rounded-lg shadow-xs border border-zinc-200 p-4 {panelClass}">
-		{#if children}
-			{@render children()}
-		{/if}
+	<div class="card w-full mb-6 {panelClass}">
+		<div class="card-body">
+			{#if children}
+				{@render children()}
+			{/if}
+		</div>
 	</div>
 {/if}
-

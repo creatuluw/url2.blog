@@ -8,7 +8,8 @@
 	import Alert from '$lib/components/Alert.svelte';
 	import GeneratingModal from '$lib/components/GeneratingModal.svelte';
 	import Button from '$lib/components/Button.svelte';
-	import { ArrowBigLeftDash, ExternalLink, Calendar, Link, NotebookPen, FileText, ReceiptText, X, Circle, CircleCheckBig } from '@lucide/svelte';
+	import CategorySelect from '$lib/components/CategorySelect.svelte';
+	import { ArrowBigLeftDash, ExternalLink, Calendar, Link, NotebookPen, FileText, ReceiptText, X } from '@lucide/svelte';
 
 	interface BlogPost {
 		id: string;
@@ -20,7 +21,7 @@
 	interface Category {
 		id: string;
 		name: string;
-		description: string;
+		description?: string;
 	}
 
 	interface SavedUrl {
@@ -60,6 +61,8 @@
 	let isSavingBlogPost = $state(false);
 
 	let assignedCategories = $state<Category[]>(data.savedUrl.categories ?? []);
+
+	// Category dropdown state
 	let autocompleteValue = $state('');
 	let isDropdownOpen = $state(false);
 	let dropdownRef = $state<HTMLDivElement | null>(null);
@@ -362,9 +365,9 @@
 		</div>
 	</div>
 {:else}
-	<main class="pt-16">
+	<main class="pt-8">
 		<!-- Hero Section -->
-		<div class="bg-[var(--bg)] py-24 sm:py-32">
+		<div class="bg-[var(--bg)] py-12 sm:py-16">
 			<div class="mx-auto max-w-[2560px] px-6 lg:px-8">
 				<div class="mx-auto max-w-2xl lg:text-center">
 					<!-- Buttons -->
@@ -397,88 +400,12 @@
 					</span>
 					<!-- Category Select -->
 					<div class="mt-6 flex flex-col items-center gap-3">
-						<!-- Autocomplete -->
-						<div class="flex gap-2">
-							<div class="relative mt-2" bind:this={dropdownRef}>
-								<div class="relative w-72">
-									<input
-										id="category-autocomplete"
-										type="text"
-										bind:value={autocompleteValue}
-										onfocus={() => { isDropdownOpen = true; }}
-										onkeydown={(e) => {
-											if (e.key === 'Enter' && shouldShowSaveButton(autocompleteValue)) {
-												saveNewCategory(autocompleteValue);
-											}
-											if (e.key === 'Escape') {
-												isDropdownOpen = false;
-											}
-										}}
-										class="block w-full rounded-md bg-white py-1.5 pr-12 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-[var(--accent)] sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-[var(--accent)]"
-										placeholder="Search or create category..."
-									/>
-									<button
-										type="button"
-										onclick={() => { isDropdownOpen = !isDropdownOpen; }}
-										class="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2"
-									>
-										<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="size-5 text-gray-400">
-											<path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
-										</svg>
-									</button>
-								</div>
-								{#if isDropdownOpen && filteredCategories().length > 0}
-									<div class="absolute left-0 top-full mt-1 z-50 w-72 max-h-60 overflow-auto rounded-md bg-white py-1 text-base shadow-lg outline outline-black/5 sm:text-sm dark:bg-gray-800 dark:shadow-none dark:-outline-offset-1 dark:outline-white/10">
-										{#each filteredCategories() as cat}
-											<button
-												type="button"
-												onclick={() => { handleAssignCategory(cat, 'connect'); autocompleteValue = ''; isDropdownOpen = false; }}
-												class="block w-full truncate px-3 py-2 text-left text-gray-900 hover:bg-[var(--accent)] hover:text-white dark:text-gray-300 dark:hover:bg-[var(--accent)]"
-											>
-												{cat.name}
-											</button>
-										{/each}
-									</div>
-								{/if}
-							</div>
-							{#if shouldShowSaveButton(autocompleteValue)}
-								<button
-									type="button"
-									onclick={() => saveNewCategory(autocompleteValue)}
-									class="mt-2 p-2 rounded-md bg-white outline-1 -outline-offset-1 outline-gray-300 hover:bg-gray-50 focus:outline-2 focus:-outline-offset-2 focus:outline-[var(--accent)] dark:bg-white/5 dark:outline-white/10 dark:hover:bg-white/10 dark:focus:outline-[var(--accent)]"
-									aria-label="Save as new category"
-								>
-									<CircleCheckBig class="size-5 text-green-600 dark:text-green-400" />
-								</button>
-							{:else}
-								<button
-									type="button"
-									disabled
-									class="mt-2 p-2 rounded-md bg-white outline-1 -outline-offset-1 outline-gray-300 dark:bg-white/5 dark:outline-white/10 opacity-50 cursor-not-allowed"
-									aria-label="Save as new category (disabled)"
-								>
-									<Circle class="size-5 text-gray-400 dark:text-gray-500" />
-								</button>
-							{/if}
-						</div>
-
-						<!-- Assigned Categories -->
-						{#if assignedCategories.length > 0}
-							<div class="flex flex-wrap gap-2 justify-center">
-								{#each assignedCategories as category}
-									<span class="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full bg-[var(--accent)]/10 text-[var(--accent)]">
-										{category.name}
-										<button
-											onclick={() => handleAssignCategory(category, 'disconnect')}
-											class="hover:text-[var(--fg)]"
-											aria-label="Remove category"
-										>
-											<X class="w-3 h-3" />
-										</button>
-									</span>
-								{/each}
-							</div>
-						{/if}
+						<CategorySelect
+							categories={data.allCategories}
+							assignedCategories={assignedCategories}
+							onAssign={handleAssignCategory}
+							onCreate={handleCreateCategory}
+						/>
 					</div>
 					{#if data.savedUrl.description}
 						<p class="mt-6 text-lg/8 text-[var(--fg-muted)]">
@@ -489,9 +416,9 @@
 					<div class="border-t border-[var(--border)] mt-6"></div>
 					{#if data.savedUrl.blogPosts.length === 0}
 						<div class="mt-10 flex justify-center">
-							<button onclick={() => openGenerateModal(data.savedUrl.id, data.savedUrl.url)} class="btn btn-primary" aria-label="Generate blog post">
+							<a href="/urls/{data.savedUrl.id}/generate" class="btn btn-primary" aria-label="Generate blog post">
 								<NotebookPen size={20} />
-							</button>
+							</a>
 						</div>
 					{/if}
 				</div>
@@ -533,24 +460,6 @@
 								</div>
 							{/each}
 						</dl>
-					</div>
-				</div>
-			</div>
-		{:else}
-			<div class="bg-[var(--bg)] py-24 sm:py-32">
-				<div class="mx-auto max-w-7xl px-6 lg:px-8">
-					<div class="mx-auto max-w-2xl lg:text-center">
-						<h2 class="text-3xl font-semibold tracking-tight text-[var(--fg)]">
-							No blog posts yet
-						</h2>
-						<p class="mt-4 text-lg/8 text-[var(--fg-muted)]">
-							Generate a blog post from this URL to get started
-						</p>
-						<div class="mt-10 flex justify-center">
-							<button onclick={() => openGenerateModal(data.savedUrl.id, data.savedUrl.url)} class="btn btn-primary" aria-label="Generate blog post">
-								<NotebookPen size={20} />
-							</button>
-						</div>
 					</div>
 				</div>
 			</div>

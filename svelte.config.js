@@ -13,7 +13,7 @@ const config = {
 	},
 	vite: {
 		ssr: {
-			noExternal: ['@lucide/svelte']
+			noExternal: ['@lucide/svelte', 'svelte-sonner']
 		}
 	}
 };

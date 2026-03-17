@@ -6,11 +6,11 @@
 	import BlogEditor from '$lib/components/BlogEditor.svelte';
 	import Header from '$lib/components/Header.svelte';
 	import Alert from '$lib/components/Alert.svelte';
-	import Toast from '$lib/components/Toast.svelte';
 	import UrlInputForm from '$lib/components/UrlInputForm.svelte';
 	import ClipboardModal from '$lib/components/ClipboardModal.svelte';
 	import GeneratingModal from '$lib/components/GeneratingModal.svelte';
-	import { Files } from '@lucide/svelte';
+	import { toast } from 'svelte-sonner';
+
 
 	// Modal state
 	let modalOpen = $state(false);
@@ -33,9 +33,6 @@
 	// UI state
 	let errorMessage = $state<string | null>(null);
 	let successMessage = $state<string | null>(null);
-	let showToast = $state(false);
-	let toastMessage = $state<string>('');
-	let toastTitle = $state<string>('');
 	let isSavingUrl = $state(false);
 
 	$effect(() => {
@@ -208,20 +205,15 @@
 			if (result?.type === 'success' && result?.data) {
 				console.log('Success branch taken');
 				if (result.data.exists) {
-					console.log('URL exists branch - setting toast');
-					errorMessage = 'This URL already exists in your collection';
-					toastTitle = 'Info';
-					toastMessage = 'This URL already exists in your collection';
-					showToast = true;
-					console.log('Toast state:', showToast, toastTitle, toastMessage);
+					console.log('URL exists branch - showing toast');
+					toast.info('URL already exists', {
+						description: 'This URL already exists in your collection'
+					});
 					// Navigate to existing URL detail page
 					goto(`/urls/${result.data.id}`);
 				} else if (result.data.id && result.data.url) {
-					console.log('New URL branch - setting toast');
-					toastTitle = 'Success';
-					toastMessage = 'URL saved successfully!';
-					showToast = true;
-					console.log('Toast state:', showToast, toastTitle, toastMessage);
+					console.log('New URL branch - showing toast');
+					toast.success('URL saved successfully!');
 					// Navigate to new URL detail page
 					goto(`/urls/${result.data.id}`);
 				}
@@ -291,14 +283,7 @@
 			<Alert type="success" message={successMessage} />
 		{/if}
 
-		{#if showToast}
-			<Toast
-				type="success"
-				title={toastTitle}
-				message={toastMessage}
-				onDismiss={() => showToast = false}
-			/>
-		{/if}
+
 
 		<GeneratingModal open={isGenerating} />
 
@@ -359,11 +344,7 @@
 					onclose={closeClipboardModal}
 				/>
 
-				<div class="flex justify-center mt-4">
-					<a href="/urls" class="text-[var(--fg-muted)] hover:text-[var(--fg)] transition-colors">
-						<Files size={24} />
-					</a>
-				</div>
+
 			</section>
 		{/if}
 	</div>

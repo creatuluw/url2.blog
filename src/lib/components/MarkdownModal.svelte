@@ -65,13 +65,22 @@
 {/if}
 
 <style>
+	.modal-header {
+		padding-left: 1.5rem;
+		padding-right: 1.5rem;
+	}
+
+	.modal-footer {
+		padding-left: 1.5rem;
+		padding-right: 1.5rem;
+	}
+
 	.markdown-content {
 		white-space: pre-wrap;
 		word-wrap: break-word;
 		font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 		font-size: 0.875rem;
 		line-height: 1.6;
-		background: var(--bg);
 		padding: 1rem;
 		border-radius: 0.5rem;
 		max-height: 60vh;
