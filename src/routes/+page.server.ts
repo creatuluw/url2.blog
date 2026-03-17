@@ -2,7 +2,7 @@ import { fail } from '@sveltejs/kit';
 import { urlSchema, blogGenerationSchema } from '$lib/validators';
 import { prisma } from '$lib/server/database';
 import { llmClient } from '$lib/llm-gateway';
-import { fetchMarkdown } from '$lib/defuddle';
+import { fetchMarkdownHybrid, fetchUrlMetadata } from '$lib/defuddle/hybrid-fetch';
 
 export const actions = {
 	saveUrl: async ({ request }: { request: Request }) => {
@@ -25,7 +25,8 @@ export const actions = {
 
 			if (existingUrl) {
 				return {
-					type: 'success' as const,
+					type: 'success',
+					status: 200,
 					data: {
 						id: existingUrl.id,
 						url: existingUrl.url,
@@ -37,21 +38,49 @@ export const actions = {
 			}
 
 			let markdownContent: string | null = null;
+			let metadata: {
+				title?: string;
+				description?: string;
+				excerpt?: string;
+				thumbnail?: string;
+				favicon?: string;
+				author?: string;
+				siteName?: string;
+				publishedDate?: string;
+			} = {};
+
 			try {
-				markdownContent = await fetchMarkdown(validation.data.url);
+				const hybridResult = await fetchMarkdownHybrid(validation.data.url);
+				markdownContent = hybridResult.markdown;
+				console.log(`[saveUrl] Fetched markdown from ${hybridResult.source} with ${hybridResult.wordCount} words for ${validation.data.url}`);
 			} catch (error) {
-				console.warn('Failed to fetch markdown from Defuddle:', error);
+				console.warn('Failed to fetch markdown using hybrid approach:', error);
+			}
+
+			try {
+				metadata = await fetchUrlMetadata(validation.data.url);
+			} catch (error) {
+				console.warn('Failed to fetch URL metadata from Defuddle:', error);
 			}
 
 			const savedUrl = await prisma.savedUrl.create({
 				data: {
 					url: validation.data.url,
 					markdownContent,
+					title: metadata.title,
+					description: metadata.description,
+					excerpt: metadata.excerpt,
+					thumbnail: metadata.thumbnail,
+					favicon: metadata.favicon,
+					author: metadata.author,
+					siteName: metadata.siteName,
+					publishedDate: metadata.publishedDate,
 				},
 			});
 
 			return {
-				type: 'success' as const,
+				type: 'success',
+				status: 200,
 				data: {
 					id: savedUrl.id,
 					url: savedUrl.url,

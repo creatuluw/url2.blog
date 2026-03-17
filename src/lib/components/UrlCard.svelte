@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+
 	interface BlogPost {
 		id: string;
 		title: string;
@@ -22,9 +24,13 @@
 	}
 
 	let { savedUrl, onEdit, onRegenerate, onDelete, isDeleting = false }: Props = $props();
+
+	function handleCardClick() {
+		goto(`/urls/${savedUrl.id}`);
+	}
 </script>
 
-<article class="p-6 border-r border-b border-zinc-200 hover:bg-zinc-50 transition-colors duration-200 group flex flex-col cursor-pointer relative">
+<article class="p-6 border-r border-b border-zinc-200 hover:bg-zinc-50 transition-colors duration-200 group flex flex-col cursor-pointer relative" onclick={handleCardClick}>
 	{#if onDelete}
 		<button
 			class="absolute top-4 right-4 p-1.5 rounded-md hover:bg-red-50 transition-colors cursor-pointer text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100"
@@ -91,12 +97,15 @@
 		{#if savedUrl.hasBlogPost && savedUrl.latestBlogPost && onEdit}
 			<button
 				class="text-xs font-medium text-zinc-400 group-hover:text-zinc-900 transition-colors flex items-center gap-1"
-				onclick={() => onEdit(
-					savedUrl.latestBlogPost!.id,
-					savedUrl.latestBlogPost!.title,
-					savedUrl.latestBlogPost!.content,
-					savedUrl.url
-				)}
+				onclick={(e) => {
+					e.stopPropagation();
+					onEdit(
+						savedUrl.latestBlogPost!.id,
+						savedUrl.latestBlogPost!.title,
+						savedUrl.latestBlogPost!.content,
+						savedUrl.url
+					);
+				}}
 			>
 				<span>Edit</span>
 				<span class="iconify" data-icon="mdi:pencil"></span>
@@ -107,7 +116,10 @@
 		{#if onRegenerate}
 			<button
 				class="text-xs font-medium text-zinc-400 group-hover:text-zinc-900 transition-colors flex items-center gap-1"
-				onclick={() => onRegenerate(savedUrl.id, savedUrl.url)}
+				onclick={(e) => {
+					e.stopPropagation();
+					onRegenerate(savedUrl.id, savedUrl.url);
+				}}
 			>
 				<span>{savedUrl.hasBlogPost ? 'Regenerate' : 'Generate'}</span>
 				<span class="iconify" data-icon="mdi:refresh"></span>

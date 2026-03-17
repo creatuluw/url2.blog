@@ -1,9 +1,12 @@
 <script lang="ts">
 	import '../app.css';
+	import { goto } from '$app/navigation';
+	import Button from '$lib/components/Button.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import BlogEditor from '$lib/components/BlogEditor.svelte';
 	import Header from '$lib/components/Header.svelte';
 	import Alert from '$lib/components/Alert.svelte';
+	import Toast from '$lib/components/Toast.svelte';
 	import UrlInputForm from '$lib/components/UrlInputForm.svelte';
 	import ClipboardModal from '$lib/components/ClipboardModal.svelte';
 	import GeneratingModal from '$lib/components/GeneratingModal.svelte';
@@ -30,6 +33,10 @@
 	// UI state
 	let errorMessage = $state<string | null>(null);
 	let successMessage = $state<string | null>(null);
+	let showToast = $state(false);
+	let toastMessage = $state<string>('');
+	let toastTitle = $state<string>('');
+	let isSavingUrl = $state(false);
 
 	$effect(() => {
 		if (errorMessage) {
@@ -116,25 +123,125 @@
 		editorSavedUrl = '';
 	}
 
+	function deserializeSvelteKitResponse(envelope: any) {
+		// SvelteKit wraps form action data in a JSON string
+		// Format: { type, status, data: "JSON_STRING" }
+		if (envelope?.data && typeof envelope.data === 'string') {
+			try {
+				const parsedData = JSON.parse(envelope.data);
+				// Check if parsedData is the string table format (array)
+				if (Array.isArray(parsedData)) {
+					return parseStringTableFormat(parsedData);
+				}
+				return parsedData;
+			} catch (e) {
+				console.error('Failed to parse nested JSON:', e);
+				return envelope;
+			}
+		}
+		return envelope;
+	}
+
+	function parseStringTableFormat(envelope: any[]) {
+		// SvelteKit uses string table serialization for form actions
+		// Format: [{keys}, stringValue1, value2, object1, stringValue2, ...]
+		if (!Array.isArray(envelope)) {
+			return envelope;
+		}
+
+		const stringTable = envelope[0];
+		const values = envelope.slice(1);
+
+		function resolveValue(value: any): any {
+			if (typeof value === 'number' && value > 0 && value <= values.length) {
+				return resolveValue(values[value - 1]);
+			}
+			return value;
+		}
+
+		function deserializeObject(obj: any): any {
+			if (!obj || typeof obj !== 'object') {
+				return resolveValue(obj);
+			}
+			if (Array.isArray(obj)) {
+				return obj.map(deserializeObject);
+			}
+			const result: any = {};
+			for (const key of Object.keys(obj)) {
+				result[key] = deserializeObject(obj[key]);
+			}
+			return result;
+		}
+
+		// Reconstruct the full envelope from the string table
+		const result: any = {};
+		for (const key of Object.keys(stringTable)) {
+			const index = stringTable[key];
+			if (index && index > 0 && index <= values.length) {
+				result[key] = deserializeObject(values[index - 1]);
+			}
+		}
+
+		return result;
+	}
+
 	async function handleSaveUrl(formData: FormData) {
+		console.log('handleSaveUrl called, setting isSavingUrl = true');
+		isSavingUrl = true;
+		console.log('isSavingUrl state:', isSavingUrl);
+
 		try {
+			console.log('Starting fetch request...');
 			const response = await fetch('?/saveUrl', {
 				method: 'POST',
 				body: formData,
 			});
-			const result = await response.json();
+			console.log('Fetch completed, status:', response.status);
 
-			if (result.type === 'success' && result.data) {
+			const envelope = await response.json();
+			console.log('Raw envelope:', envelope);
+
+			const result = deserializeSvelteKitResponse(envelope);
+			console.log('Parsed result:', result);
+			console.log('Result type:', result?.type, 'Result data:', result?.data);
+
+			if (result?.type === 'success' && result?.data) {
+				console.log('Success branch taken');
 				if (result.data.exists) {
+					console.log('URL exists branch - setting toast');
 					errorMessage = 'This URL already exists in your collection';
+					toastTitle = 'Info';
+					toastMessage = 'This URL already exists in your collection';
+					showToast = true;
+					console.log('Toast state:', showToast, toastTitle, toastMessage);
+					// Navigate to existing URL detail page
+					goto(`/urls/${result.data.id}`);
 				} else if (result.data.id && result.data.url) {
-					openGenerateModal(result.data.id, result.data.url);
+					console.log('New URL branch - setting toast');
+					toastTitle = 'Success';
+					toastMessage = 'URL saved successfully!';
+					showToast = true;
+					console.log('Toast state:', showToast, toastTitle, toastMessage);
+					// Navigate to new URL detail page
+					goto(`/urls/${result.data.id}`);
 				}
-			} else if (result.status >= 400 && result.data?.error) {
+			} else if (result?.error) {
+				console.log('Error branch (result.error)');
+				errorMessage = result.error;
+			} else if (result?.data?.error) {
+				console.log('Error branch (result.data.error)');
 				errorMessage = result.data.error;
+			} else {
+				console.log('Fallback error branch');
+				errorMessage = 'Failed to save URL. Please try again.';
 			}
 		} catch (err) {
+			console.error('Save URL error:', err);
 			errorMessage = 'Failed to save URL. Please try again.';
+		} finally {
+			console.log('Finally block - setting isSavingUrl = false');
+			isSavingUrl = false;
+			console.log('isSavingUrl state:', isSavingUrl);
 		}
 	}
 
@@ -184,6 +291,15 @@
 			<Alert type="success" message={successMessage} />
 		{/if}
 
+		{#if showToast}
+			<Toast
+				type="success"
+				title={toastTitle}
+				message={toastMessage}
+				onDismiss={() => showToast = false}
+			/>
+		{/if}
+
 		<GeneratingModal open={isGenerating} />
 
 		{#if showEditor && editorBlogPostId}
@@ -193,9 +309,9 @@
 						<h2 class="text-xl font-bold">Edit Blog Post</h2>
 						<p class="text-sm text-[var(--fg-muted)]">{editorSavedUrl}</p>
 					</div>
-					<button class="btn btn-outline btn-sm" onclick={closeEditor}>
+					<Button variant="outline" size="sm" onclick={closeEditor}>
 						Close Editor
-					</button>
+					</Button>
 				</div>
 				<BlogEditor
 					content={editorContent}
@@ -234,6 +350,7 @@
 					onUrlChange={(url) => urlInputValue = url}
 					onPaste={handlePasteFromClipboard}
 					onSubmit={handleSaveUrl}
+					disabled={isSavingUrl}
 				/>
 
 				<ClipboardModal

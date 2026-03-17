@@ -2,3 +2,13 @@ when storing a url to the db i also want to store the available metadata like ti
 
 
 ###########################################################
+
+"---
+title: ""OpenViktor — Open-Source AI Employee for Slack""
+source: ""https://openviktor.com/""
+domain: ""openviktor.com""
+language: ""en""
+description: ""Hire your AI employee. For any role.""
+---
+
+"

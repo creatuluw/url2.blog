@@ -22,6 +22,8 @@ model SavedUrl {
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
   blogPosts       BlogPost[]
+  tags            String[]
+  urlCategories   UrlCategory[] @relation("saved_urls_to_url_categories")
 
   @@map("saved_urls")
 }
@@ -44,4 +46,13 @@ model BlogPost {
 
   @@index([savedUrlId])
   @@map("blog_posts")
+}
+
+model UrlCategory {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String?
+  savedUrls   SavedUrl[] @relation("saved_urls_to_url_categories")
+
+  @@map("url_categories")
 }

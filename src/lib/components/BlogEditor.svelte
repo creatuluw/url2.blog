@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Button from '$lib/components/Button.svelte';
+
 	interface Props {
 		content?: string;
 		title?: string;
@@ -53,20 +55,22 @@
 		</div>
 
 		<div class="editor-toolbar">
-			<button
-				class="btn btn-outline btn-sm"
-				class:active={isEditing}
+			<Button
+				variant="outline"
+				size="sm"
+				class={isEditing ? 'active' : ''}
 				onclick={() => isEditing = true}
 			>
 				Edit
-			</button>
-			<button
-				class="btn btn-outline btn-sm"
-				class:active={!isEditing}
+			</Button>
+			<Button
+				variant="outline"
+				size="sm"
+				class={!isEditing ? 'active' : ''}
 				onclick={() => isEditing = false}
 			>
 				Preview
-			</button>
+			</Button>
 		</div>
 	</div>
 
@@ -109,16 +113,16 @@
 	</div>
 
 	<div class="editor-footer">
-		<button class="btn btn-outline" onclick={handleCancel}>
+		<Button variant="outline" onclick={handleCancel}>
 			Cancel
-		</button>
-		<button
-			class="btn btn-primary"
+		</Button>
+		<Button
+			variant="primary"
 			disabled={!formTitle.trim() || !formContent.trim()}
 			onclick={handleSave}
 		>
 			Save Changes
-		</button>
+		</Button>
 	</div>
 </div>
 
@@ -150,11 +154,7 @@
 		gap: 0.5rem;
 	}
 
-	.editor-toolbar .btn.active {
-		background: var(--accent);
-		color: var(--bg);
-		border-color: var(--accent);
-	}
+
 
 	.editor-stats {
 		display: flex;
