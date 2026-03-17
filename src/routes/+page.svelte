@@ -3,13 +3,20 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import BlogEditor from '$lib/components/BlogEditor.svelte';
 	import Header from '$lib/components/Header.svelte';
-	import { ClipboardList } from '@lucide/svelte';
+	import { Files } from '@lucide/svelte';
 
 	// Modal state
 	let modalOpen = $state(false);
 	let currentUrlId = $state<string | null>(null);
 	let currentUrl = $state<string>('');
 	let isGenerating = $state(false);
+	let urlInputValue = $state<string>('');
+
+	// Clipboard modal state
+	let clipboardModalOpen = $state(false);
+	let clipboardModalMessage = $state<string>('');
+
+
 
 	// Editor state
 	let showEditor = $state(false);
@@ -29,6 +36,25 @@
 			}, 5000);
 			return () => clearTimeout(timer);
 		}
+	});
+
+
+
+
+	// Auto-paste from clipboard on page load if URL starts with http
+	$effect(() => {
+		async function checkClipboard() {
+			try {
+				const clipboardText = await navigator.clipboard.readText();
+				if (clipboardText && clipboardText.startsWith('http')) {
+					urlInputValue = clipboardText.trim();
+				}
+			} catch (err) {
+				// Clipboard access denied or not available - silently fail
+				console.log('Clipboard access not available:', err);
+			}
+		}
+		checkClipboard();
 	});
 
 	$effect(() => {
@@ -58,6 +84,31 @@
 		editorContent = content;
 		editorSavedUrl = url;
 		showEditor = true;
+	}
+
+
+
+	async function handlePasteFromClipboard() {
+		try {
+			const clipboardText = await navigator.clipboard.readText();
+			if (clipboardText && clipboardText.startsWith('http')) {
+				urlInputValue = clipboardText.trim();
+			} else if (clipboardText && !clipboardText.startsWith('http')) {
+				clipboardModalMessage = 'Clipboard does not contain a valid URL (must start with http)';
+				clipboardModalOpen = true;
+			} else {
+				clipboardModalMessage = 'Clipboard is empty. Please copy a URL first.';
+				clipboardModalOpen = true;
+			}
+		} catch (err) {
+			clipboardModalMessage = 'Failed to access clipboard. Please paste manually.';
+			clipboardModalOpen = true;
+		}
+	}
+
+	function closeClipboardModal() {
+		clipboardModalOpen = false;
+		clipboardModalMessage = '';
 	}
 
 	function closeEditor() {
@@ -247,22 +298,49 @@
 				<form method="POST" action="?/saveUrl" class="space-y-4" onsubmit={(e) => {
 					e.preventDefault();
 					const formData = new FormData(e.currentTarget);
+					if (urlInputValue) {
+						formData.set('url', urlInputValue);
+					}
 					handleSaveUrl(formData);
 				}}>
 					<div class="input-group">
 						<label class="input-label" for="url-input">
 							Paste your URL
 						</label>
-						<input
-							id="url-input"
-							type="url"
-							name="url"
-							class="input-field"
-							placeholder="https://example.com"
-							autocomplete="off"
-							required
-						/>
-
+						<div class="relative">
+							<input
+								id="url-input"
+								type="url"
+								name="url"
+								class="input-field pr-12"
+								placeholder="https://example.com"
+								autocomplete="off"
+								required
+								bind:value={urlInputValue}
+							/>
+							<button
+								type="button"
+								class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-[var(--accent-light)] transition-colors cursor-pointer"
+								onclick={handlePasteFromClipboard}
+								title="Paste from clipboard"
+								aria-label="Paste from clipboard"
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="18"
+									height="18"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								>
+									<rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+									<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+								</svg>
+							</button>
+						</div>
 					</div>
 
 					<button type="submit" class="btn btn-primary mt-2">
@@ -270,9 +348,38 @@
 					</button>
 				</form>
 
+				{#if clipboardModalOpen}
+					<div class="modal-overlay open modal-overlay-top" onclick={closeClipboardModal}>
+						<div class="small-modal" onclick={(e) => e.stopPropagation()}>
+							<div class="small-modal-body">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="24"
+									height="24"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									class="small-modal-icon"
+								>
+									<circle cx="12" cy="12" r="10" />
+									<line x1="12" y1="8" x2="12" y2="12" />
+									<line x1="12" y1="16" x2="12.01" y2="16" />
+								</svg>
+								<p class="small-modal-message">{clipboardModalMessage}</p>
+							</div>
+							<button class="btn btn-sm btn-outline" onclick={closeClipboardModal}>
+								OK
+							</button>
+						</div>
+					</div>
+				{/if}
+
 				<div class="flex justify-center mt-4">
 					<a href="/urls" class="text-[var(--fg-muted)] hover:text-[var(--fg)] transition-colors">
-						<ClipboardList size={24} />
+						<Files size={24} />
 					</a>
 				</div>
 			</section>
@@ -309,4 +416,46 @@
 		border-bottom: 1px solid var(--border);
 		padding-bottom: 1rem;
 	}
+
+	.small-modal {
+		background: var(--bg-elevated);
+		border: 1px solid var(--border);
+		border-radius: 16px;
+		max-width: 320px;
+		width: 100%;
+		padding: 1.5rem;
+		transform: scale(0.95) translateY(20px);
+		transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+		text-align: center;
+	}
+
+	.modal-overlay.open .small-modal {
+		transform: scale(1) translateY(0);
+	}
+
+	.modal-overlay-top {
+		align-items: flex-start;
+		padding-top: 15vh;
+	}
+
+	.small-modal-body {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 1rem;
+		margin-bottom: 1rem;
+	}
+
+	.small-modal-icon {
+		color: var(--error);
+	}
+
+	.small-modal-message {
+		font-size: 0.9375rem;
+		color: var(--fg);
+		line-height: 1.5;
+		margin: 0;
+	}
+
+
 </style>

@@ -8,27 +8,40 @@ datasource db {
 }
 
 model SavedUrl {
-  id              String   @id @default(cuid())
-  url             String   @unique
-  markdownContent String?  @db.Text
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id              String     @id @default(cuid())
+  url             String     @unique
+  title           String?
+  description     String?
+  excerpt         String?
+  thumbnail       String?
+  favicon         String?
+  author          String?
+  siteName        String?    @map("site_name")
+  publishedDate   String?    @map("published_date")
+  markdownContent String?    @map("markdown_content")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
   blogPosts       BlogPost[]
+
+  @@map("saved_urls")
 }
 
 model BlogPost {
-  id                   String   @id @default(cuid())
-  savedUrlId           String
-  savedUrl             SavedUrl @relation(fields: [savedUrlId], references: [id], onDelete: Cascade)
-  title                String
-  content              String   @db.Text
-  frontmatter          Json
-  tone                 String
-  format               String
-  category             String
-  tags                 String[]
-  blogReason           String   @db.Text
-  additionalInstructions String?  @db.Text
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  id                     String   @id @default(cuid())
+  savedUrlId             String   @map("saved_url_id")
+  title                  String
+  content                String
+  frontmatter            Json
+  tone                   String
+  format                 String
+  category               String
+  tags                   String[]
+  blogReason             String   @map("blog_reason")
+  additionalInstructions String?  @map("additional_instructions")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+  savedUrl               SavedUrl @relation(fields: [savedUrlId], references: [id], onDelete: Cascade)
+
+  @@index([savedUrlId])
+  @@map("blog_posts")
 }

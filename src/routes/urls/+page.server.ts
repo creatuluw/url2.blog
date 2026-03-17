@@ -175,6 +175,33 @@ export const actions = {
 			});
 		}
 	},
+
+	deleteUrl: async ({ request }: { request: Request }) => {
+		const formData = await request.formData();
+		const savedUrlId = formData.get('savedUrlId') as string;
+
+		if (!savedUrlId) {
+			return fail(400, {
+				error: 'URL ID is required',
+			});
+		}
+
+		try {
+			await prisma.savedUrl.delete({
+				where: { id: savedUrlId },
+			});
+
+			return {
+				type: 'success' as const,
+				message: 'URL deleted successfully',
+			};
+		} catch (error) {
+			console.error('Delete error:', error);
+			return fail(500, {
+				error: 'Unable to delete URL. Please retry.',
+			});
+		}
+	},
 };
 
 function extractFrontmatter(content: string) {

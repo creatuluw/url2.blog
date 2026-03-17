@@ -36,6 +36,7 @@
 
 	let errorMessage = $state<string | null>(null);
 	let successMessage = $state<string | null>(null);
+	let isDeleting = $state<string | null>(null);
 
 	// Parse SvelteKit's serialized form data with indexed references
 	function parseFormDataResponse<T>(result: { type: string; status: number; data: string | T }): T | null {
@@ -129,6 +130,39 @@
 		} catch (err) {
 			isGenerating = false;
 			errorMessage = 'Failed to generate blog post. Please try again.';
+		}
+	}
+
+	async function handleDeleteUrl(savedUrlId: string) {
+		if (!confirm('Are you sure you want to delete this URL? This will also delete any associated blog posts.')) {
+			return;
+		}
+
+		isDeleting = savedUrlId;
+
+		try {
+			const formData = new FormData();
+			formData.append('savedUrlId', savedUrlId);
+
+			const response = await fetch('?/deleteUrl', {
+				method: 'POST',
+				body: formData,
+			});
+
+			const result = await response.json();
+
+			if (result.type === 'success') {
+				successMessage = 'URL deleted successfully';
+				// Reload the page to reflect the deletion
+				window.location.reload();
+			} else if (result.status >= 400) {
+				const data = parseFormDataResponse<{ error?: string }>(result);
+				errorMessage = data?.error || 'Failed to delete URL';
+			}
+		} catch (err) {
+			errorMessage = 'Failed to delete URL. Please try again.';
+		} finally {
+			isDeleting = null;
 		}
 	}
 </script>
@@ -239,7 +273,34 @@
 				{#if data.savedUrls.length > 0}
 					<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 border-t border-x border-zinc-200">
 						{#each data.savedUrls as savedUrl}
-							<article class="p-6 border-r border-b border-zinc-200 hover:bg-zinc-50 transition-colors duration-200 group flex flex-col">
+							<article class="p-6 border-r border-b border-zinc-200 hover:bg-zinc-50 transition-colors duration-200 group flex flex-col cursor-pointer relative">
+								<button
+									class="absolute top-4 right-4 p-1.5 rounded-md hover:bg-red-50 transition-colors cursor-pointer text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100"
+									onclick={(e) => {
+										e.stopPropagation();
+										handleDeleteUrl(savedUrl.id);
+									}}
+									disabled={isDeleting === savedUrl.id}
+									title="Delete URL"
+									aria-label="Delete URL"
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										width="18"
+										height="18"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+									>
+										<polyline points="3 6 5 6 21 6"/>
+										<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+										<line x1="10" y1="11" x2="10" y2="17"/>
+										<line x1="14" y1="11" x2="14" y2="17"/>
+									</svg>
+								</button>
 								<span class="text-xs font-medium text-zinc-400 uppercase tracking-widest">
 									{new Date(savedUrl.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
 								</span>
